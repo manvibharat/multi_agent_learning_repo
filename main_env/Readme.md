@@ -1,0 +1,1 @@
+# The environment of the double auction

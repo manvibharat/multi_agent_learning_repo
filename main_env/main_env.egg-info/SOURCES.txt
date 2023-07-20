@@ -1,0 +1,9 @@
+setup.py
+main_env/__init__.py
+main_env.egg-info/PKG-INFO
+main_env.egg-info/SOURCES.txt
+main_env.egg-info/dependency_links.txt
+main_env.egg-info/top_level.txt
+main_env/envs/__init__.py
+main_env/envs/auction_env.py
+main_env/wrappers/__init__.py
