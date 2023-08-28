@@ -91,24 +91,25 @@ class AuctionEnv(ParallelEnv):
     def __init__(self,render_mode=None):
 
         # self.max_num_agents = 2
-        self.num_of_agents = 1
+        self.num_of_agents = 3
         self.possible_agents = list(range(self.num_of_agents))
-        self.timestep = 0 
+        self.timestep = 0
         self.horizon = 24 # Horizon (finite horizon game)
-        self.seed_value = 24
-
+        self.seed_value = 10
+        np.random.seed(self.seed_value)
         # Environment specific details (can it change in each iteration of the episode?)
         self.no_of_bids = 1
         self.max_bid_price = 500
         self.min_bid_price = 0.5
-        self.min_bid_qty = 0
-        self.max_bid_qty = 1500
-        self.max_req_quantity = 1500 #Mwhr
-        self.min_req_quantity = 0.5 #Mwhr
-        self.balancing_price = 10 * self.max_bid_price # Psi price outisde the auction <---- Assumption
-        # self.requirements = np.round(np.random.uniform(self.min_req_quantity,self.max_req_quantity,size=(self.num_of_agents,)),2)
-        self.requirements = np.array([1500.0])
+        self.min_bid_qty = 30
+        self.max_bid_qty = 100
+        self.max_req_quantity = 300 #Mwhr
+        self.min_req_quantity = 30 #Mwhr
+        self.balancing_price = 2 * self.max_bid_price # Psi price outisde the auction <---- Assumption
+        self.requirements = np.round(np.random.uniform(self.min_req_quantity,self.max_req_quantity,size=(self.num_of_agents,)),2)
+        # self.requirements = np.array([1500.0])
         self.supply_curve = NCpGenco()
+        self.total_quantity = 1500
         self.asks = self.supply_curve.asks()
 
         ## asks for clearing mechanism
@@ -282,10 +283,10 @@ class AuctionEnv(ParallelEnv):
         cleared_quant_agent = {}
         for key,  val in zip(bid_player_map,cleared_bids):
             if key in rewards:
-                rewards[key] += (-1 * self.mcp) * val[1] # <----- respresents cost hence negative
+                rewards[key] += (1 * self.mcp) * val[1] # <----- respresents cost hence negative
                 cleared_quant_agent[key] += val[1]
             else:
-                rewards[key] = (-1* self.mcp) * val[1] # <------- Represents cost hence negative
+                rewards[key] = (1* self.mcp) * val[1] # <------- Represents cost hence negative
                 cleared_quant_agent[key] = val[1] 
         
         rewards = {k: v for k, v in sorted(list(rewards.items()))} # See better way to do this
@@ -307,9 +308,9 @@ class AuctionEnv(ParallelEnv):
         # print(self.last_cl_ask_index,"prev last cl ind")
         # print(last_ask_index,"pres last cl ind")
         # print(self.asks,"asks")
-        for inx in range(self.last_cl_ask_index,last_ask_index+1):
-            if self.asks[inx][1] == 0:
-                self.asks[inx][0] = 0 
+        # for inx in range(self.last_cl_ask_index,last_ask_index+1):
+        #     if self.asks[inx][1] == 0:
+        #         self.asks[inx][0] = 0 
 
 
         # print(self.asks, "asks")
@@ -346,8 +347,9 @@ class AuctionEnv(ParallelEnv):
         # self.max_num_agents = len(self.agents)
         self.timestep = 0
         
-        # self.requirements = np.round(np.random.uniform(self.min_req_quantity,self.max_req_quantity,size=(self.num_of_agents,)),2)
-        self.requirements = np.array([1500.0])
+        self.requirements = np.round(np.random.uniform(self.min_req_quantity,self.max_req_quantity,size=(self.num_of_agents,)),2)
+        
+        # self.requirements = np.array([1500.0])
         self.supply_curve = NCpGenco()
         self.asks = self.supply_curve.asks()
         self.last_cl_ask_index = 0
@@ -382,7 +384,7 @@ class AuctionEnv(ParallelEnv):
         if self.timestep < self.horizon:
             rewards = self._clearing_mechanism(actions)
         else:
-            rewards = {i : -self.balancing_price * self.requirements[i]  for i in self.agents}
+            rewards = {i : self.balancing_price * self.requirements[i]  for i in self.agents}
         
         # print(self.timestep)
         # Check termination conditions
@@ -398,10 +400,16 @@ class AuctionEnv(ParallelEnv):
         #     terminations = {i: True for i in range(self.num_agents)}
         #     self.agents = []
 
-        for i in self.agents:
-            if self.requirements[i] == 0.0 or self.timestep == self.horizon:
-                terminations[i] = True
-                self.agents.remove(i)
+        for i in self.possible_agents:
+            # print("env:agent",i)
+            # print("env:requirements",self.requirements)
+            if i in self.agents:
+                if self.requirements[i] == 0.0 or self.timestep == self.horizon:
+                    # print("inside")
+                    terminations[i] = True
+                    self.agents.remove(i)
+                    # print("env:agents",self.agents)
+                    # print("env:terminations",terminations)
                 # self.requirements = np.delete(self.requirements,i)
         # print(terminations)
         # print("-----------------------")
@@ -547,7 +555,11 @@ class FlattenObsSingleAgent(AuctionEnv):
         # flatten_obs(observations)
         new_obs = {0:np.array([])}
         for k,v in observations.items():
+            print(v)
             for k1,v1 in v.items():
+                # print(v1)
+                # print(new_obs[k])
+                print(k)
                 new_obs[k] = np.append(new_obs[k],v1.flatten())
             
         return new_obs[0], {}
